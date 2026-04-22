@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Procesador de Fichadas Hikvision</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-main: #0f0f1e;
+            --bg-card: #1a1a2e;
+            --bg-input: #252538;
+            --accent: #00ff88;
+            --accent-dim: #00ff8844;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b8;
+            --border: #2a2a44;
+            --error: #ff4444;
+            --warning: #ffaa00;
+        }
+
+        body {
+            font-family: 'Lexend', sans-serif;
+            background: var(--bg-main);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(0, 255, 136, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 90% 80%, rgba(0, 255, 136, 0.03) 0%, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 3rem 0 2rem;
+        }
+
+        h1 {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--accent), #00ddff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.03em;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: clamp(1rem, 2vw, 1.2rem);
+            font-weight: 300;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 1.5rem;
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), #00ddff);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: 1rem;
+            padding: 4rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            background: var(--bg-input);
+        }
+
+        .upload-zone:hover {
+            border-color: var(--accent);
+            background: rgba(0, 255, 136, 0.05);
+        }
+
+        .upload-zone.dragover {
+            border-color: var(--accent);
+            background: rgba(0, 255, 136, 0.1);
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
+            display: block;
+        }
+
+        .upload-text {
+            font-size: 1.2rem;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .upload-subtext {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-info {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid var(--accent-dim);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            display: none;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .file-info.show {
+            display: flex;
+        }
+
+        .file-icon {
+            font-size: 2.5rem;
+        }
+
+        .file-details {
+            flex: 1;
+        }
+
+        .file-name {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            color: var(--accent);
+        }
+
+        .file-size {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .btn {
+            background: var(--accent);
+            color: var(--bg-main);
+            border: none;
+            padding: 1rem 2.5rem;
+            border-radius: 0.75rem;
+            font-size: 1.05rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Lexend', sans-serif;
+            box-shadow: 0 10px 30px rgba(0, 255, 136, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 40px rgba(0, 255, 136, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            box-shadow: none;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .progress-container {
+            display: none;
+            margin-top: 2rem;
+        }
+
+        .progress-container.show {
+            display: block;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            background: var(--bg-input);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), #00ddff);
+            width: 0;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .progress-text {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .results {
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-value {
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .alerts {
+            margin-top: 2rem;
+        }
+
+        .alert {
+            padding: 1rem 1.5rem;
+            border-radius: 0.75rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 0.95rem;
+            border-left: 4px solid;
+        }
+
+        .alert-warning {
+            background: rgba(255, 170, 0, 0.1);
+            border-color: var(--warning);
+            color: var(--warning);
+        }
+
+        .alert-success {
+            background: rgba(0, 255, 136, 0.1);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .alert-error {
+            background: rgba(255, 68, 68, 0.1);
+            border-color: var(--error);
+            color: var(--error);
+        }
+
+        .download-btn {
+            width: 100%;
+            margin-top: 2rem;
+            padding: 1.5rem;
+            font-size: 1.1rem;
+        }
+
+        .instructions {
+            background: rgba(0, 255, 136, 0.05);
+            border: 1px solid var(--accent-dim);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .instructions h3 {
+            color: var(--accent);
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+
+        .instructions ol {
+            margin-left: 1.5rem;
+            color: var(--text-secondary);
+            line-height: 2;
+        }
+
+        .instructions li {
+            margin-bottom: 0.5rem;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card {
+            animation: fadeIn 0.6s ease;
+        }
+
+        .error-message {
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid var(--error);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-top: 1rem;
+            color: var(--error);
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .card {
+                padding: 1.5rem;
+            }
+
+            .upload-zone {
+                padding: 2rem 1rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚡ Procesador de Fichadas</h1>
+            <p class="subtitle">Automatización de Nómina Hikvision</p>
+        </header>
+
+        <div class="card instructions">
+            <h3>📋 Cómo usar</h3>
+            <ol>
+                <li>Descargá el archivo <strong>AllReport.xls</strong> desde Hikvision</li>
+                <li>Subilo usando el botón de abajo</li>
+                <li>El sistema procesará automáticamente todas las fichadas</li>
+                <li>Descargá el archivo Excel generado con las horas calculadas</li>
+            </ol>
+        </div>
+
+        <div class="card">
+            <h2 style="margin-bottom: 1.5rem; font-size: 1.5rem; font-weight: 600;">
+                📤 Subir Archivo de Hikvision
+            </h2>
+            
+            <div class="upload-zone" id="uploadZone">
+                <span class="upload-icon">📊</span>
+                <div class="upload-text">Arrastrá tu archivo aquí o hacé click</div>
+                <div class="upload-subtext">Archivos soportados: .xls, .xlsx</div>
+                <input type="file" id="fileInput" accept=".xls,.xlsx">
+            </div>
+
+            <div class="file-info" id="fileInfo">
+                <span class="file-icon">✓</span>
+                <div class="file-details">
+                    <div class="file-name" id="fileName"></div>
+                    <div class="file-size" id="fileSize"></div>
+                </div>
+                <button class="btn btn-secondary" onclick="clearFile()">Cambiar</button>
+            </div>
+
+            <div style="margin-top: 2rem; text-align: center;">
+                <button class="btn" id="processBtn" disabled onclick="processFile()">
+                    ⚡ Procesar Fichadas
+                </button>
+            </div>
+
+            <div class="error-message" id="errorMessage"></div>
+
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">Procesando...</div>
+            </div>
+        </div>
+
+        <div class="card results" id="results">
+            <h2 style="margin-bottom: 1.5rem; font-size: 1.5rem; font-weight: 600;">
+                📊 Resultados del Procesamiento
+            </h2>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="employeeCount">0</div>
+                    <div class="stat-label">Empleados</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="recordCount">0</div>
+                    <div class="stat-label">Registros</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="alertCount">0</div>
+                    <div class="stat-label">Alertas</div>
+                </div>
+            </div>
+
+            <div class="alerts" id="alertsContainer"></div>
+
+            <button class="btn download-btn" id="downloadBtn" onclick="downloadFile()">
+                📥 Descargar Archivo Procesado
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+
+        // Setup drag and drop
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+
+        uploadZone.addEventListener('click', () => fileInput.click());
+
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            selectedFile = file;
+            
+            // Show file info
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileSize').textContent = formatFileSize(file.size);
+            document.getElementById('fileInfo').classList.add('show');
+            
+            // Enable process button
+            document.getElementById('processBtn').disabled = false;
+            
+            // Hide error and results
+            document.getElementById('errorMessage').classList.remove('show');
+            document.getElementById('results').classList.remove('show');
+        }
+
+        function clearFile() {
+            selectedFile = null;
+            fileInput.value = '';
+            document.getElementById('fileInfo').classList.remove('show');
+            document.getElementById('processBtn').disabled = true;
+            document.getElementById('results').classList.remove('show');
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' bytes';
+            else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+            else return (bytes / 1048576).toFixed(1) + ' MB';
+        }
+
+        async function processFile() {
+            if (!selectedFile) return;
+
+            const progressContainer = document.getElementById('progressContainer');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            const errorMessage = document.getElementById('errorMessage');
+            const processBtn = document.getElementById('processBtn');
+            
+            progressContainer.classList.add('show');
+            errorMessage.classList.remove('show');
+            processBtn.disabled = true;
+
+            try {
+                // Crear FormData
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+
+                progressFill.style.width = '30%';
+                progressText.textContent = 'Subiendo archivo...';
+
+                // Enviar al servidor
+                const response = await fetch('/api/procesar', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                progressFill.style.width = '70%';
+                progressText.textContent = 'Procesando fichadas...';
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Error al procesar');
+                }
+
+                progressFill.style.width = '100%';
+                progressText.textContent = '¡Completado!';
+
+                // Descargar archivo automáticamente
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Nomina_Procesada_${new Date().toISOString().slice(0,10)}.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+                // Mostrar éxito
+                setTimeout(() => {
+                    progressContainer.classList.remove('show');
+                    showSuccess();
+                }, 1000);
+
+            } catch (error) {
+                console.error('Error:', error);
+                errorMessage.textContent = `❌ ${error.message}`;
+                errorMessage.classList.add('show');
+                progressContainer.classList.remove('show');
+                processBtn.disabled = false;
+            }
+        }
+
+        function showSuccess() {
+            const resultsDiv = document.getElementById('results');
+            const alertsContainer = document.getElementById('alertsContainer');
+            
+            alertsContainer.innerHTML = `
+                <div class="alert alert-success">
+                    ✅ ¡Archivo procesado y descargado exitosamente!
+                </div>
+                <div class="alert alert-success" style="margin-top: 1rem;">
+                    📥 Revisa tu carpeta de Descargas
+                </div>
+            `;
+            
+            resultsDiv.classList.add('show');
+            
+            // Ocultar botón de descarga ya que se descargó automáticamente
+            document.getElementById('downloadBtn').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
